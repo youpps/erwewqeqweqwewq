@@ -37,6 +37,36 @@ async function bootstrap() {
 
     await client.getMe();
 
+    let groupedMessages: { [key: number]: { file: Buffer; caption: string; filename: string }[] } = {};
+
+    async function sendGroupedMessage(chat: number | string, groupedId: number, type: "photo" | "video" | "document", file: Buffer, filename: string, caption: string) {
+      if (!groupedMessages[groupedId]) {
+        groupedMessages[groupedId] = [{ file, caption, filename }];
+      } else {
+        groupedMessages[groupedId].push({ file, caption, filename });
+      }
+
+      setTimeout(() => {
+        if (!groupedMessages[groupedId]) {
+          return;
+        }
+
+        if (type === "video") {
+          client.sendVideoMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+        }
+
+        if (type === "photo") {
+          client.sendPhotoMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+        }
+
+        if (type === "document") {
+          client.sendDocumentMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+        }
+
+        delete groupedMessages[groupedId];
+      }, 2000);
+    }
+
     client.onMessage(async (e) => {
       try {
         const message = e.message;
@@ -58,6 +88,21 @@ async function bootstrap() {
         for (let { from, to } of channels) {
           if (username === from) {
             if (message.media) {
+              if (message.groupedId) {
+                if (message.photo) {
+                  const photo = (await client.downloadMedia(message)) as Buffer;
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "photo", photo, "photo", message.text);
+                } else if (message.video) {
+                  const video = (await client.downloadMedia(message)) as Buffer;
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "video", video, "video", message.text);
+                } else if (message.document) {
+                  const document = (await client.downloadMedia(message)) as Buffer;
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "document", document, (message.document.attributes[0] as any).fileName, message.text);
+                }
+
+                return;
+              }
+
               if (message.photo) {
                 const photo = (await client.downloadMedia(message)) as Buffer;
                 await client.sendPhoto(to, photo, message.text);

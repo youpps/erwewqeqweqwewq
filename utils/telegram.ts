@@ -72,6 +72,46 @@ class Telegram {
     this.client.addEventHandler(callback, new NewMessage({ incoming: true, outgoing: false }));
   }
 
+  async sendPhotoMediaGroup(chat: number | string, files: { file: Buffer; caption: string }[]) {
+    await this.bot.sendMediaGroup(
+      chat,
+      files.map(({ file, caption }) => ({
+        type: "photo",
+        caption,
+        media: {
+          source: file,
+        },
+      }))
+    );
+  }
+
+  async sendVideoMediaGroup(chat: number | string, files: { file: Buffer; caption: string }[]) {
+    await this.bot.sendMediaGroup(
+      chat,
+      files.map(({ file, caption }) => ({
+        type: "video",
+        caption,
+        media: {
+          source: file,
+        },
+      }))
+    );
+  }
+
+  async sendDocumentMediaGroup(chat: number | string, files: { file: Buffer; filename: string; caption: string }[]) {
+    await this.bot.sendMediaGroup(
+      chat,
+      files.map(({ file, caption, filename }) => ({
+        type: "document",
+        caption,
+        media: {
+          filename,
+          source: file,
+        },
+      }))
+    );
+  }
+
   async sendPhoto(chat: number | string, photo: Buffer, caption: string) {
     await this.bot.sendPhoto(
       chat,
