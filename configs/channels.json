@@ -1,1 +1,10 @@
-[{"from":"@uqwiejqew","to":"@testchannel12308"}]
+[
+    {
+        "from": "@channelfrom",
+        "to": "@channelto"
+    },
+    {
+        "from": "@rcbc_info",
+        "to": "@bizness_s_kitayem_russia_chine/163"
+    }
+]

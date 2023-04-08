@@ -16,6 +16,12 @@ class Channels {
 
   static async add(channel: IChannel) {
     const channels = await Channels.getAll();
+
+    const channelExists = channels.some(({ from, to }) => from === channel.from && to === channel.to);
+    if (channelExists) {
+      return;
+    }
+
     channels.push(channel);
 
     await fs.writeFile(path.resolve(__dirname, "../configs/channels.json"), JSON.stringify(channels));

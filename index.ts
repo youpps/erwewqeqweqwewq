@@ -39,7 +39,7 @@ async function bootstrap() {
 
     let groupedMessages: { [key: number]: { file: Buffer; caption: string; filename: string }[] } = {};
 
-    async function sendGroupedMessage(chat: number | string, groupedId: number, type: "photo" | "video" | "document", file: Buffer, filename: string, caption: string) {
+    async function sendGroupedMessage(chat: number | string, groupedId: number, type: "photo" | "video" | "document", file: Buffer, filename: string, caption: string, thread: number | undefined) {
       if (!groupedMessages[groupedId]) {
         groupedMessages[groupedId] = [{ file, caption, filename }];
       } else {
@@ -52,15 +52,15 @@ async function bootstrap() {
         }
 
         if (type === "video") {
-          client.sendVideoMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+          client.sendVideoMediaGroup(chat, groupedMessages[groupedId], thread).catch(console.log);
         }
 
         if (type === "photo") {
-          client.sendPhotoMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+          client.sendPhotoMediaGroup(chat, groupedMessages[groupedId], thread).catch(console.log);
         }
 
         if (type === "document") {
-          client.sendDocumentMediaGroup(chat, groupedMessages[groupedId]).catch(console.log);
+          client.sendDocumentMediaGroup(chat, groupedMessages[groupedId], thread).catch(console.log);
         }
 
         delete groupedMessages[groupedId];
@@ -82,39 +82,48 @@ async function bootstrap() {
           }
         }
 
+        const messageText = message.text
+          .replace(/\@\S+/g, "")
+          .replace(/(?:https?|ftp):\/\/[\n\S]+/g, "")
+          .replace(/\S+\.\S+\.\S+/, "")
+          .replace(/\*\*/g, "*")
+          .trim();
+
         const username = await client.getUsername(message.chatId);
         const channels = await Channels.getAll();
 
         for (let { from, to } of channels) {
           if (username === from) {
+            const thread = to.split("/").length === 2 ? Number(to.split("/")[1]) : undefined;
+
             if (message.media) {
               if (message.groupedId) {
                 if (message.photo) {
                   const photo = (await client.downloadMedia(message)) as Buffer;
-                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "photo", photo, "photo", message.text);
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "photo", photo, "photo", messageText, thread);
                 } else if (message.video) {
                   const video = (await client.downloadMedia(message)) as Buffer;
-                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "video", video, "video", message.text);
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "video", video, "video", messageText, thread);
                 } else if (message.document) {
                   const document = (await client.downloadMedia(message)) as Buffer;
-                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "document", document, (message.document.attributes[0] as any).fileName, message.text);
+                  sendGroupedMessage(to, message.groupedId.toJSNumber(), "document", document, (message.document.attributes[0] as any).fileName, messageText, thread);
                 }
 
                 return;
               }
-
+              // 1AgAOMTQ5LjE1NC4xNjcuNDEBuwQkFLI7Vqacurd0NN6gNTtx22+ZZmj+zJws+u1eN9wGeTVjsgSh8FbwJNgUsPQOzJdHRKHeuQbflcfDjRKmxaTF5HKK1xzJd1dH4ovpBEPAMP1SN/ezEEgRCH/fRrRkPXcLApIRyGUcY3Gz7E2n7Xt7bGcr21fTUeXMx8+M/SJD0q1k2qIRlhT/dK02GsRB5oslUyAN3tTnrhEQhTzuh4VUjvfB31ot6/Op9wUYLqBlD4QHI3ezLXF5zWcztQYiM2iUNGslaYa8CoBItWlHgSnNEqP8dTyXOOBTf3cBDh2igNPTrshngjDq7vwQOCMQaHpa3OxInhXNw+FVyg3+kLk=
               if (message.photo) {
                 const photo = (await client.downloadMedia(message)) as Buffer;
-                await client.sendPhoto(to, photo, message.text);
+                await client.sendPhoto(to, photo, messageText, thread);
               } else if (message.video) {
                 const video = (await client.downloadMedia(message)) as Buffer;
-                await client.sendVideo(to, video, message.text);
+                await client.sendVideo(to, video, messageText, thread);
               } else if (message.document) {
                 const document = (await client.downloadMedia(message)) as Buffer;
-                await client.sendDocument(to, document, (message.document.attributes[0] as any).fileName, message.text);
+                await client.sendDocument(to, document, (message.document.attributes[0] as any).fileName, messageText, thread);
               }
             } else {
-              await client.sendMessage(to, message.text);
+              await client.sendMessage(to, messageText, thread);
             }
           }
         }
