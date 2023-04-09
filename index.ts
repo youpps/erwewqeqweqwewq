@@ -4,9 +4,10 @@ import Session from "./utils/session";
 import Telegram from "./utils/telegram";
 import config from "./configs/appConfig.json";
 import path from "path";
-import { log } from "console";
+import fs from "fs/promises";
 import Channels from "./utils/channels";
 import Bans from "./utils/ban";
+import { log } from "console";
 
 const PORT = process.env.PORT || 5000;
 
@@ -81,13 +82,34 @@ async function bootstrap() {
             return;
           }
         }
-
-        const messageText = message.text
+        const messageText = message.rawText
           .replace(/\@\S+/g, "")
           .replace(/(?:https?|ftp):\/\/[\n\S]+/g, "")
-          .replace(/\S+\.\S+\.\S+/, "")
-          .replace(/\*\*/g, "*")
-          .trim();
+          .replace(/\S+\.\S+\.\S+/, "");
+        // .trim();
+
+        const messageEntities = e.message.entities
+          ?.map(({ className, length, ...rest }) => {
+            if (className === "MessageEntityTextUrl") {
+              return {
+                ...rest,
+                length: length - 1,
+                type: "text_link",
+              };
+            }
+
+            return {
+              ...rest,
+              length: length - 1,
+              type: className
+                .replace(/MessageEntity/, "")
+                .replace(/[A-Z]/g, (str) => `_${str.toLowerCase()}`)
+                .slice(1) as any,
+            };
+          })
+          .filter(({ length, offset }) => {
+            return length + offset <= messageText.length;
+          });
 
         const username = await client.getUsername(message.chatId);
         const channels = await Channels.getAll();
@@ -97,7 +119,7 @@ async function bootstrap() {
             const thread = to.split("/").length === 2 ? Number(to.split("/")[1]) : undefined;
             const channelTo = to.split("/").length === 2 ? to.split("/")[0] : to;
 
-            if (message.media) {
+            if (message.media && !message.webPreview) {
               if (message.groupedId) {
                 if (message.photo) {
                   const photo = (await client.downloadMedia(message)) as Buffer;
@@ -115,16 +137,16 @@ async function bootstrap() {
               // 1AgAOMTQ5LjE1NC4xNjcuNDEBuwQkFLI7Vqacurd0NN6gNTtx22+ZZmj+zJws+u1eN9wGeTVjsgSh8FbwJNgUsPQOzJdHRKHeuQbflcfDjRKmxaTF5HKK1xzJd1dH4ovpBEPAMP1SN/ezEEgRCH/fRrRkPXcLApIRyGUcY3Gz7E2n7Xt7bGcr21fTUeXMx8+M/SJD0q1k2qIRlhT/dK02GsRB5oslUyAN3tTnrhEQhTzuh4VUjvfB31ot6/Op9wUYLqBlD4QHI3ezLXF5zWcztQYiM2iUNGslaYa8CoBItWlHgSnNEqP8dTyXOOBTf3cBDh2igNPTrshngjDq7vwQOCMQaHpa3OxInhXNw+FVyg3+kLk=
               if (message.photo) {
                 const photo = (await client.downloadMedia(message)) as Buffer;
-                await client.sendPhoto(channelTo, photo, messageText, thread);
+                await client.sendPhoto(channelTo, photo, messageText, messageEntities, thread);
               } else if (message.video) {
                 const video = (await client.downloadMedia(message)) as Buffer;
-                await client.sendVideo(channelTo, video, messageText, thread);
+                await client.sendVideo(channelTo, video, messageText, messageEntities, thread);
               } else if (message.document) {
                 const document = (await client.downloadMedia(message)) as Buffer;
-                await client.sendDocument(channelTo, document, (message.document.attributes[0] as any).fileName, messageText, thread);
+                await client.sendDocument(channelTo, document, (message.document.attributes[0] as any).fileName, messageText, messageEntities, thread);
               }
             } else {
-              await client.sendMessage(channelTo, messageText, thread);
+              await client.sendMessage(channelTo, messageText, messageEntities, thread);
             }
           }
         }

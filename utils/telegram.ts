@@ -9,6 +9,7 @@ import input from "./input";
 import Session from "./session";
 import { EntityLike } from "telegram/define";
 import { log } from "console";
+import { MessageEntity } from "telegraf/typings/core/types/typegram";
 
 interface ITelegram {
   apiId: number;
@@ -78,7 +79,6 @@ class Telegram {
       files.map(({ file, caption }) => ({
         type: "photo",
         caption,
-        parse_mode: "Markdown",
         media: {
           source: file,
         },
@@ -93,7 +93,6 @@ class Telegram {
       files.map(({ file, caption }) => ({
         type: "video",
         caption,
-        parse_mode: "Markdown",
         media: {
           source: file,
         },
@@ -108,7 +107,6 @@ class Telegram {
       files.map(({ file, caption, filename }) => ({
         type: "document",
         caption,
-        parse_mode: "Markdown",
         media: {
           filename,
           source: file,
@@ -118,7 +116,7 @@ class Telegram {
     );
   }
 
-  async sendPhoto(chat: number | string, photo: Buffer, caption: string, message_thread_id?: number) {
+  async sendPhoto(chat: number | string, photo: Buffer, caption: string, entities?: MessageEntity[], message_thread_id?: number) {
     await this.bot.sendPhoto(
       chat,
       {
@@ -127,12 +125,12 @@ class Telegram {
       {
         caption,
         message_thread_id,
-        parse_mode: "Markdown",
+        caption_entities: entities,
       }
     );
   }
 
-  async sendVideo(chat: number | string, video: Buffer, caption: string, message_thread_id?: number) {
+  async sendVideo(chat: number | string, video: Buffer, caption: string, entities?: MessageEntity[], message_thread_id?: number) {
     await this.bot.sendVideo(
       chat,
       {
@@ -141,12 +139,12 @@ class Telegram {
       {
         caption,
         message_thread_id,
-        parse_mode: "Markdown",
+        caption_entities: entities,
       }
     );
   }
 
-  async sendDocument(chat: number | string, document: Buffer, filename: string, caption: string, message_thread_id?: number) {
+  async sendDocument(chat: number | string, document: Buffer, filename: string, caption: string, entities?: MessageEntity[], message_thread_id?: number) {
     await this.bot.sendDocument(
       chat,
       {
@@ -156,13 +154,13 @@ class Telegram {
       {
         caption,
         message_thread_id,
-        parse_mode: "Markdown",
+        caption_entities: entities,
       }
     );
   }
 
-  async sendMessage(chat: number | string, message: string, message_thread_id?: number) {
-    await this.bot.sendMessage(chat, message, { message_thread_id, parse_mode: "Markdown" });
+  async sendMessage(chat: number | string, message: string, entities?: MessageEntity[], message_thread_id?: number) {
+    await this.bot.sendMessage(chat, message, { message_thread_id, entities });
   }
 
   async getChats() {
