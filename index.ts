@@ -85,7 +85,8 @@ async function bootstrap() {
         const messageText = message.rawText
           .replace(/\@\S+/g, "")
           .replace(/(?:https?|ftp):\/\/[\n\S]+/g, "")
-          .replace(/\S+\.\S+\.\S+/, "");
+          .replace(/\S+\.\S+\.\S+/g, "")
+          .replace(/@\S+/g, "");
         // .trim();
 
         const messageEntities = e.message.entities
